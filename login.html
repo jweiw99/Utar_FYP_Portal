@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="author" content="WongJunWei">
+        <meta name="description" content="Every student undertaking the degree is required to complete a project under the supervision of a FICT academic staff or an external supervisor from the industry. The project should provide students with the opportunity to bring together the academic knowledge and skills acquired from the range of modules already studied.">
+        <meta name="keywords" content="UTAR FICT,  UTAR FYP, FICT FYP, UTAR FYP portal">
+        
+        <title>FYP Management Portal</title>
+        <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon"/>
+
+        <!-- Reset CSS -->
+        <link rel="stylesheet" href="css/reset.css">
+        
+        <!--Custom CSS-->
+        <link rel="stylesheet" href="css/common.css">
+        <link rel="stylesheet" href="css/login.css">
+
+        <!-- Custom fonts / icon -->
+        <link rel="stylesheet" href="css/fontawesome/solid.min.css">
+        <link rel="stylesheet" href="css/fontawesome/brands.min.css">
+        <link rel="stylesheet" href="css/fontawesome/all.min.css">
+    </head>
+    <body>
+        <div class="background"></div>
+        <form method="post" autocomplete="off" id="LoginForm">
+            <div class="outer">
+                <div class="middle">
+                    <div class="inner" >
+                        <div class="logo">
+                            <picture>
+                                <a href="index.html"><img src="images/Utar-Logo.jpg" alt="UNIVERSITI TUNKU ABDUL RAHMAN"></a>
+                            </picture>
+                            <span class="text-title">FYP Management Portal</span>
+                        </div>
+                        <table border="0">
+                            <tr>
+                                <td colspan="3">
+                                    <div class="errorMessage" id="errorMessage"></div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td width="30"><i class="fas fa-envelope"></i></td>
+                                <td colspan="2" >
+                                    <div class="input-wrapper" >
+                                        <input autocomplete="off" id="email" type="email" name="email" value="" placeholder="Staff Email" maxlength="113" autofocus required/>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><i class="fas fa-key"></i></td>
+                                <td colspan="2">
+                                    <div class="input-wrapper" >
+                                        <input autocomplete="off" id="password" type="password" name="password" placeholder="Password" required/>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="2" width="180px" class="login-button g-login"><input type="button" id="g-login" value="Sign In With Student Email"></td>
+                                <td class="login-button"><input type="submit" value="Log in"></td>
+                            </tr>
+                        </table>
+                        <p class="text">
+                            On password related enquiry, please email (via your UTAR email account whenever possible) to info@utar.edu.my with necessary details (e.g. full name, some descriptions on the case) for further assistance.
+                        </p>
+                    </div>
+                    <div class="footer">
+                        <span>&copy; University Tunku Abdul Rahman. All Rights Reserved.</span>
+                    </div> 
+                </div>
+            </div>
+        </form>
+
+        <!-- SCRIPTS -->
+        <!-- Js / Jquery -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+        <!-- Firebase login-->
+        <script src="https://www.gstatic.com/firebasejs/5.9.0/firebase.js"></script>
+        <script src="js/AccountFirebase.js"></script>
+        <script src="js/auth.js"></script>
+
+        <script>
+
+            initApp();
+            var provider = new firebase.auth.GoogleAuthProvider();
+            provider.setCustomParameters({
+                hd: "1utar.my"
+            });
+
+
+            $(document).ready(function(){
+
+                $("#errorMessage").hide();
+
+                $('#g-login').click(function(){
+
+                    $("#errorMessage").html("");
+                    $("#errorMessage").hide();
+
+                    firebase.auth().signInWithPopup(provider).then(result => {
+                        validAccountCheck().then((validAccount) => {  /// Check if user has a valid email account
+                            checkaccount(validAccount);
+                        });
+                    });
+                });
+
+                $("#LoginForm").submit(function( event ) {
+                    event.preventDefault();
+                    
+                    //login in
+                    var email = $("#email").val();
+                    var password = $("#password").val();
+                    
+                    $("#errorMessage").html("");
+                    $("#errorMessage").hide();
+                    
+                    // Sign in with email and pass.
+                    // [START authwithemail]
+                    firebase.auth().signInWithEmailAndPassword(email, password).then(result => {
+                        validAccountCheck().then((validAccount) => {  /// Check if user has a valid email account
+                            checkaccount(validAccount);
+                        });
+                    }).catch(function(error) {
+                        // Handle Errors here.
+                        var errorCode = error.code;
+                        var errorMessage = error.message;
+
+                        // [START_EXCLUDE]
+                        $("#errorMessage").show();
+                        
+                        if (errorCode === 'auth/wrong-password') 
+                            $("#errorMessage").html("Wrong password.");
+                        else 
+                            $("#errorMessage").html(errorMessage);
+                    });
+                });
+		    });
+           
+           function initApp() {
+               // Listening for auth state changes.
+               // [START authstatelistener]
+               firebase.auth().onAuthStateChanged(result => {
+                    var user = firebase.auth().currentUser;
+                    if(user){
+                        validAccountCheck().then((validAccount) => {  /// Check if user has a valid email account
+                            checkaccount(validAccount);
+                        });
+                    }
+               });
+               // [END authstatelistener]
+           }
+
+           function checkaccount(validAccount){
+                if (validAccount) {
+                    $("#errorMessage").html("");
+                    $("#errorMessage").hide();
+                    window.location.href = "page.html";
+                }
+                else {
+                    /// Not valid account
+                    $("#errorMessage").show();
+                    $("#errorMessage").html("Invalid Account");
+                    firebase.auth().signOut();
+                };
+           }
+        </script>
+    </body>
+</html>

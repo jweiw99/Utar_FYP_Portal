@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <meta name="description" content="">
+        <meta name="author" content="">
+        
+        <title>View LogBook</title>
+        
+        <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon"/>
+
+         <!-- Custom fonts for this website-->
+         <link rel="stylesheet" href="css/fontawesome/all.min.css">
+         <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">
+ 
+         <!-- Custom styles for this website-->
+         <link href="css/sb-admin-2.min.css" rel="stylesheet">
+         <link href="vendor/datatables/dataTables.bootstrap4.min.css" rel="stylesheet">
+
+    </head>
+
+        <!-- Begin Page Content -->
+        <div class="container-fluid">
+
+            <!-- Page Heading -->
+            <h1 class="h3 mb-2 text-gray-800">LogBook</h1>
+            
+            <!-- DataTales Example -->
+            <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">View Project</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                <table class="table table-bordered" width="100%" cellspacing="0">
+                    <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>Title</th>
+                        <th>Sem</th>
+                        <th>Supervisor</th>
+                        <th>Supv. Email</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody id="tabledata"></tbody>
+                </table>
+                </div>
+            </div>
+            </div>
+
+            <div id="addlogtable">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Add LogBook</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                        <form id="target" method="post">
+                            <input type="hidden" id="projectid" value="">
+                        <div class = "form-group">
+                            <input type="date" class="form-control" id="logdate" required>
+                        </div>
+                        <div class = "form-group">
+                            <input type="text" class="form-control" id="particular" placeholder="Particular" required>
+                        </div>
+                        <div class = "form-group">
+                            <textarea class="form-control rounded-0" id="remark" placeholder="Remark" rows="3" required></textarea>
+                        </div>
+                        <div class = "input-group">
+                            <input class="btn btn-primary btn-block" type="submit" value="Add">
+                        </div>
+                        </form>
+                    </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary pt-3 float-left">View Log Book</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                    <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                        <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Particular</th>
+                            <th>Remark</th>
+                            <th>Comment</th>
+                            <th>Action</th>
+                        </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <!-- /.container-fluid -->
+
+        <!-- SCRIPTS -->
+        <!-- Js / Jquery -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.3.1/js/bootstrap.bundle.min.js"></script> 
+
+        <!-- Core plugin JavaScript-->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.4.1/jquery.easing.min.js"></script>
+
+        <!-- Custom scripts for all pages-->
+        <script src="js/sb-admin-2.min.js"></script>
+
+        <!-- Google Login -->
+        <script src="https://apis.google.com/js/platform.js" async defer></script>
+
+        <!-- Firebase login-->
+        <script src="https://www.gstatic.com/firebasejs/5.9.0/firebase.js"></script>
+        <script src="js/AccountFirebase.js"></script>
+
+        <!-- Page level plugins -->
+        <script src="vendor/datatables/jquery.dataTables.min.js"></script>
+        <script src="vendor/datatables/dataTables.bootstrap4.min.js"></script>
+
+        <!-- Custome JS -->
+        <script src="js/pagechecker.js"></script>
+        
+        <script>
+            var table = $('#dataTable').DataTable();
+            $(function () {//onload
+                
+                pagechecker();
+                initApp();
+                table;
+                $("#addlogtable").hide();
+
+                $("#target").submit(function( event ) {
+                    event.preventDefault();
+                    var user = firebase.auth().currentUser;
+                    addLog(user);
+                });
+            });
+
+            function initApp(){
+                firebase.auth().onAuthStateChanged(function(user) {
+                    if (user) {
+                        if(!(user.email.split('@')[1] == '1utar.my' || user.email.split('@')[1] == 'utar.edu.my')){
+                            if(typeof(Storage)!=="undefined") sessionStorage.clear();
+                            firebase.auth().signOut();
+                        }else{
+                            getProjectDetail(user);
+                        }
+                    }
+                });
+            }
+            
+            function getProjectDetail(user){
+                var no = 1;
+                var db = firebase.firestore().collection("project");
+                db = db.where("email", "==", user.email);
+                db = db.where("approved", "==", "1");
+                db.onSnapshot(function(snapshot) {
+                    if(!snapshot.empty){
+                        snapshot.docChanges().forEach(function(change) {
+                            $("#norecord").remove();
+                            if(change.type !== "removed"){
+                                getLecturerName(no,change);
+                            }else{
+                                var id = "#" +change.doc.id;
+                                $(id).remove();
+                            }
+                            no++;
+                        }); 
+                    }else{
+                        $("#tabledata").html('<tr id="norecord"><td colspan="5" class="text-center">No Record</td></tr>');
+                    }
+                });
+            }
+
+            function getLecturerName(no,change){
+                var docRef = firebase.firestore().collection("users").doc(change.doc.data().lectureemail);
+                docRef.get().then(function(doc) {
+                    if (doc.exists) {
+                        printProjectData(no,doc,change);
+                    }
+                }).catch(function(error) {
+                    console.log(error.message);
+                });
+            }
+
+            function printProjectData(no,doc,change){
+                var data = "";
+                var buttonlogbook = "";
+                if(change.doc.data().grade==""){
+                    buttonlogbook += '<div><button class="btn btn-primary btn-block" type="button" onclick="addLogBook(\''+change.doc.id+'\')">Add Logbook</button></div>';
+                }
+                buttonlogbook += '<div><button class="btn btn-secondary btn-block" type="button" onclick="viewLogBook(\''+change.doc.data().grade+'\',\''+change.doc.id+'\')">View Logbook</button></div>';
+
+                if (change.type === "added") {
+                    data += '<tr id="'+change.doc.id+'">';
+                    data += '<td>'+no+"</td>";
+                    data += "<td>"+change.doc.data().title+"</td>";
+                    data += "<td>"+change.doc.data().sem+"</td>";
+                    data += "<td>"+doc.data().displayName+"</td>";
+                    data += "<td>"+doc.data().email+"</td>";
+                    data += "<td>"+buttonlogbook+"</td>";
+                    data += "</tr>";
+                    $("#tabledata").append(data);
+                }else if (change.type === "modified") {
+                    var id = "#" + change.doc.id;
+                    data += '<td>'+no+"</td>";
+                    data += "<td>"+change.doc.data().title+"</td>";
+                    data += "<td>"+change.doc.data().sem+"</td>";
+                    data += "<td>"+doc.data().displayName+"</td>";
+                    data += "<td>"+doc.data().email+"</td>";
+                    data += "<td>"+buttonlogbook+"</td>";
+                    $(id).html(data);
+                }
+            }
+
+            function addLogBook(pid){
+                $("#projectid").val(pid);
+                $("#addlogtable").show();
+            }
+
+            function getlogdata(user){
+                var obj = new Object();
+                obj.logdate = $("#logdate").val();
+                obj.particular = $("#particular").val();
+                obj.remark = $("#remark").val();
+                obj.comment = "";
+                obj.projectid = $("#projectid").val();
+                obj.uid = user.uid;
+                obj.stuemail = user.email;
+                obj.insertDateTime = firebase.firestore.FieldValue.serverTimestamp();
+                obj.updateDateTime = firebase.firestore.FieldValue.serverTimestamp();
+                return obj;
+            }
+
+            function addLog(user){
+                var obj = getlogdata(user);
+                var docRef = firebase.firestore().collection("logbook");
+                var query = docRef.where("logdate", "==", obj.logdate);
+                query = query.where("uid", "==", user.uid);
+                query.get().then(function(thisDoc) {
+                    if (!thisDoc.empty) {
+                        alert("Only one log per day.");
+                    }
+                    else {
+                        alert("Added");
+                        $("#addlogtable").hide();
+                        docRef.add(obj);
+                    }
+                }).catch(function(error) {
+                    console.log(error.message);
+                });
+            }
+            
+            function viewLogBook(grade,pid){
+                $("#addlogtable").hide();
+                table.clear().draw();
+                var db = firebase.firestore().collection("logbook");
+                db = db.where("projectid", "==", pid);
+                db.onSnapshot(function(snapshot) {
+                    snapshot.docChanges().forEach(function(change) {
+                        if(change.type !== "removed"){
+                            var comment = change.doc.data().comment==null?"No Comment":change.doc.data().comment;
+                            var particular = change.doc.data().particular;
+                            var remark = change.doc.data().remark;
+                            var buttonlogbook = '';
+                            if(grade==""){
+                                particular = '<textarea class="form-control rounded-0" id="'+change.doc.id+'pt" rows="3" required>'+particular+'</textarea>';
+                                remark = '<textarea class="form-control rounded-0" id="'+change.doc.id+'rmk" rows="3" required>'+remark+'</textarea>';
+                                buttonlogbook += '<div class=""><button class="btn btn-primary btn-block" type="button" onclick="editLogBook(\''+change.doc.id+'\')">Edit</button>';
+                                buttonlogbook += '<button class="btn btn-danger btn-block" type="button" onclick="deleteLogBook(\''+change.doc.id+'\')">Delete</button></div>';
+                            }
+
+                            if (change.type === "added") {
+                                var rowNode = table.row.add([
+                                    change.doc.data().logdate,
+                                    particular,
+                                    remark,
+                                    comment,
+                                    buttonlogbook
+                                ]).node();
+
+                                $(rowNode).attr("id", change.doc.id);
+                                table.draw();
+                            }else if (change.type === "modified") {
+                                table.row($("#" + change.doc.id)).data([
+                                    change.doc.data().logdate,
+                                    particular,
+                                    remark,
+                                    comment,
+                                    buttonlogbook
+                                ]);
+                                table.row($("#" + change.doc.id)).invalidate().draw();
+                            }
+                        }else if (change.type === "removed") {
+                            table.rows($("#" +change.doc.id)).remove().draw();
+                        }
+                    }); 
+                });
+            }
+
+            function getlogbookdata(logid){
+                var obj = new Object();
+                obj.particular = $("#"+logid+"pt").val();
+                obj.remark = $("#"+logid+"rmk").val();
+                obj.updateDateTime = firebase.firestore.FieldValue.serverTimestamp();
+                return obj;
+            }
+
+            function editLogBook(logid){
+                var obj = getlogbookdata(logid);
+                var db = firebase.firestore();
+                db.collection("logbook").doc(logid).update(obj)
+                .then(function() {
+                    alert("Updated");
+                 })
+                .catch(function(error) {
+                    console.log(error);
+                 });
+            }
+
+            function deleteLogBook(logid){
+                var db = firebase.firestore();
+                db.collection("logbook").doc(logid).delete().then(function() {
+                    alert("Deleted");
+                }).catch(function(error) {
+                   console.log(error);
+                });
+            }
+           
+        </script>
+    </body>
+</html>

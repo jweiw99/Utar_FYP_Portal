@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <meta name="description" content="">
+        <meta name="author" content="">
+
+        <title>Lecturer Profile</title>
+        
+        <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon"/>
+
+        <!-- Custom fonts for this website-->
+        <link rel="stylesheet" href="css/fontawesome/all.min.css">
+        <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">
+
+        <!-- Custom styles for this website-->
+        <link rel = "stylesheet" href = "css/profile.css">
+
+    </head>
+    <body background = "images/Profile/8232118408_0e032ba129_b.jpg"> 
+    <!-- Begin Page Content -->
+    <div class="container">
+
+        <!-- DataTales Example -->
+        <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Lecturer Form</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+              <form action="POST" id="LoginForm">
+                <div class = "input-group input-group-icon">
+                  <input type = "text" placeholder = "Lecturer ID" id = "id" required/>
+                  (Example: S100022)
+                  <div class = "input-icon"><i class = "fa fa-user"></i></div>
+                </div>
+                <div class = "input-group input-group-icon">
+                  <input type = "text" placeholder = "Full Name" id = "lecname" readonly required/>
+                  <div class = "input-icon"><i class = "fa fa-user"></i></div>
+                </div>
+                <div class = "input-group input-group-icon">
+                  <input type = "tel" placeholder = "Phone Number" id = "phone" required/>
+                  (Example: 010-1234567)
+                  <div class = "input-icon"><i class = "fa fa-user"></i></div>
+                </div>
+                <div class = "input-group input-group-icon">
+                  <input type = "email" placeholder = "Email Address (use UTAR Email)" id = "email" readonly/>
+                  (Example: emailid@utar.edu.my)
+                  <div class = "input-icon"><i class = "fa fa-user"></i></div>
+                </div>
+                <div class = "input-group input-group-icon">
+                  <select placeholder = "Department" id = "department" required>
+                    <option value="CS">Computer Science (CS)</option>
+                    <option value="IA">Information System Engineering (IA)</option>
+                    <option value="IB">Business Information System (IB)</option>
+                    <option value="CT">Computer Engineering (CT)</option> 
+                    <option value="CN">Communications and Networking (CN)</option>
+                  </select>
+                </div>
+                  <div class = "col-half">
+                    <h4>Date of Birth</h4>
+                    <div class = "input-group">
+                      <div class = "col-7">
+                        <input type = "date" id="dob" required>
+                      </div>
+                    </div>
+                  </div>
+                  <div class = "col-half">
+                      <h4>Gender</h4>
+                      <div class = "input-group">
+                        <input type = "radio" name = "gender" value = "male" id = "gender-male" checked/>
+                        <label for = "gender-male">Male</label>
+                        <input type = "radio" name = "gender" value = "female" id = "gender-female"/>
+                        <label for = "gender-female">Female</label>
+                      </div>
+                    </div>
+                  <div class = "input-group">
+                    <th><input type = "submit" name =  "submit" value = "Submit" id = "submit"/></th>
+                    <th><input type = "reset" name = "reset" value = "Clear" id = "reset"/></th>
+                  </div>
+              </form>
+            </div>
+        </div>
+        </div>
+
+    </div>
+    
+    <!-- SCRIPTS -->
+        <!-- Js / Jquery -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.3.1/js/bootstrap.bundle.min.js"></script> 
+
+        <!-- Core plugin JavaScript-->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.4.1/jquery.easing.min.js"></script>
+
+        <!-- Custom scripts for all pages-->
+        <script src="js/sb-admin-2.min.js"></script>
+
+        <!-- Google Login -->
+        <script src="https://apis.google.com/js/platform.js" async defer></script>
+
+        <!-- Firebase login-->
+        <script src="https://www.gstatic.com/firebasejs/5.9.0/firebase.js"></script>
+        <script src="js/AccountFirebase.js"></script>
+
+        <!-- Custome JS -->
+        <script src="js/pagechecker.js"></script>
+        
+        <script>
+          $(function() {
+
+            pagechecker();
+            initApp();
+
+            $("#LoginForm").submit(function( event ) {
+              event.preventDefault();
+              var user = firebase.auth().currentUser;
+              updateView(user);
+            });
+          });
+
+          function initApp(){
+            firebase.auth().onAuthStateChanged(function(user) {
+                if (user) {
+                    if(!(user.email.split('@')[1] == '1utar.my' || user.email.split('@')[1] == 'utar.edu.my')){
+                        if(typeof(Storage)!=="undefined") sessionStorage.clear();
+                        firebase.auth().signOut();
+                    }else{
+                      GetUser(user);
+                    }
+                }
+            });
+          }
+
+          function getdata(method,user){
+            var obj = new Object();
+              obj.sid = $("#id").val()==null?"":$("#id").val();
+              obj.displayName = $("#lecname").val()==null?"":$("#lecname").val();
+              obj.batch = "";
+              obj.phoneno = $("#phone").val()==null?"":$("#phone").val();
+              obj.email = user.email;
+              obj.course = $("#department").val()==null?"":$("#department").val();
+              obj.dob = $("#dob").val()==null?"":$("#dob").val();
+              obj.gender = $('input[name=gender]:checked').val();
+              obj.type = "2";
+              obj.uid = user.uid;
+              if(method==1){
+                obj.insertDateTime = firebase.firestore.FieldValue.serverTimestamp();
+                obj.updateDateTime = firebase.firestore.FieldValue.serverTimestamp();
+              }else{
+                obj.updateDateTime = firebase.firestore.FieldValue.serverTimestamp();
+              }
+        
+              if (user.photoURL == null) {
+                obj.photoURL = "https://i.imgur.com/oW1dGDI.jpg";
+              }else{
+                obj.photoUrl = user.photoURL;
+              }
+              return obj;
+          }
+
+          function updateView(user) {
+            var docRef = firebase.firestore().collection("users").doc(user.email);
+            docRef.get().then(function(thisDoc) {
+                if (thisDoc.exists) {
+                    var obj = getdata(2,user);
+                    docRef.update(obj);
+                    user.updateProfile({
+                      displayName: obj.displayName,
+                      photoUrl: obj.photoUrl
+                    });
+                    alert("Updated");
+                }
+                else {
+                    var obj = getdata(1,user);
+                    docRef.set(obj);
+                    user.updateProfile({
+                      displayName: obj.displayName,
+                      photoUrl: obj.photoUrl
+                    });
+                }
+            }).catch(function(error) {
+              console.log(error.message);
+            });
+
+          }
+
+          function GetUser(user) {
+            var username = "";
+            if(user.displayName==null) {
+              $("#lecname").removeAttr("readonly");
+            }else{
+              username = user.displayName;
+            }
+
+            var db = firebase.firestore();
+            db.collection("users").doc(user.email).get().then(function(doc) {
+              if (doc.exists) {
+                $("#id").val(doc.data().sid);
+                $("#lecname").val(doc.data().displayName);
+                $("#phone").val(doc.data().phoneno);
+                $("#email").val(user.email);
+                $("#department").val(doc.data().course);
+                $("#dob").val(doc.data().dob);
+                $("input[name=gender]").val(doc.data().gender);
+              } else {
+                $("#lecname").val(username);
+                $("#email").val(user.email);
+                updateView(user);
+              }
+            }).catch(function(error) {
+                console.log("Error getting document:", error);
+            });
+            
+          }
+        </script>
+    </body>
+</html>

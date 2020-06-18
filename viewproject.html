@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <meta name="description" content="">
+        <meta name="author" content="">
+
+        <title>View Project</title>
+        
+        <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon"/>
+
+        <!-- Custom fonts for this website-->
+        <link rel="stylesheet" href="css/fontawesome/all.min.css">
+        <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">
+
+        <!-- Custom styles for this website-->
+        <link href="css/sb-admin-2.min.css" rel="stylesheet">
+
+    </head>
+    <body> 
+        <!-- Begin Page Content -->
+        <div class="container-fluid">
+
+            <!-- Page Heading -->
+            <h1 class="h3 mb-2 text-gray-800">Project</h1>
+            
+            <!-- DataTales Example -->
+            <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">View Project</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>Title</th>
+                        <th>Sem</th>
+                        <th>Objective</th>
+                        <th>Innovations</th>
+                        <th>Deliverables</th>
+                        <th>Approved</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody id="tabledata"></tbody>
+                </table>
+                </div>
+            </div>
+            </div>
+
+        </div>
+        <!-- /.container-fluid -->
+
+        <!-- SCRIPTS -->
+        <!-- Js / Jquery -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.3.1/js/bootstrap.bundle.min.js"></script> 
+
+        <!-- Core plugin JavaScript-->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.4.1/jquery.easing.min.js"></script>
+
+        <!-- Custom scripts for all pages-->
+        <script src="js/sb-admin-2.min.js"></script>
+
+        <!-- Google Login -->
+        <script src="https://apis.google.com/js/platform.js" async defer></script>
+
+        <!-- Firebase login-->
+        <script src="https://www.gstatic.com/firebasejs/5.9.0/firebase.js"></script>
+        <script src="js/AccountFirebase.js"></script>
+
+        <!-- Custome JS -->
+        <script src="js/pagechecker.js"></script>
+
+        <script>
+            $(function () {//onload
+                
+                pagechecker();
+                initApp();
+
+            });
+
+            function initApp(){
+                firebase.auth().onAuthStateChanged(function(user) {
+                    if (user) {
+                        if(!(user.email.split('@')[1] == '1utar.my' || user.email.split('@')[1] == 'utar.edu.my')){
+                            if(typeof(Storage)!=="undefined") sessionStorage.clear();
+                            firebase.auth().signOut();
+                        }else{
+                            getProjectDetail(user);
+                        }
+                    }
+                });
+            }
+
+            function getdata(pid){
+                var obj = new Object();
+                obj.objective = $("#"+pid+"obj").val();
+                obj.innovations = $("#"+pid+"inn").val();
+                obj.deliverables = $("#"+pid+"del").val();
+                obj.approved = "0";
+                obj.updateDateTime = firebase.firestore.FieldValue.serverTimestamp();
+                return obj;
+            }
+            
+            function getProjectDetail(user){
+                var no = 1;
+                var db = firebase.firestore().collection("project");
+                db.where("email", "==", user.email).onSnapshot(function(snapshot) {
+                    if(!snapshot.empty){
+                        snapshot.docChanges().forEach(function(change) {
+                            $("#norecord").remove();
+                            if(change.type !== "removed"){
+                                var data = "";
+                                var approved = change.doc.data().approved=="0"?"No":change.doc.data().approved=="2"?"Rejected":"Yes";
+                                var objective = change.doc.data().objective;
+                                var innovations = change.doc.data().innovations;
+                                var deliverables = change.doc.data().deliverables;
+                                var buttonproject = "";
+                                if(change.doc.data().grade==""){
+                                    objective = '<textarea class="form-control rounded-0" id="'+change.doc.id+'obj" rows="3" required>'+objective+'</textarea>';
+                                    innovations = '<textarea class="form-control rounded-0" id="'+change.doc.id+'obj" rows="3" required>'+innovations+'</textarea>';
+                                    deliverables = '<textarea class="form-control rounded-0" id="'+change.doc.id+'obj" rows="3" required>'+deliverables+'</textarea>';
+                                    buttonproject += '<div class=""><button class="btn btn-primary btn-block" type="button" onclick="editProject(\''+change.doc.id+'\')">Edit</button>';
+                                    buttonproject += '<button class="btn btn-danger btn-block" type="button" onclick="deleteProject(\''+change.doc.id+'\')">Delete</button></div>';
+                                }
+
+                                if (change.type === "added") {
+                                    data += '<tr id="'+change.doc.id+'">';
+                                    data += '<td id="'+change.doc.id+'no">'+no+"</td>";
+                                    data += "<td>"+change.doc.data().title+"</td>";
+                                    data += "<td>"+change.doc.data().sem+"</td>";
+                                    data += '<td>'+objective+'</td>';
+                                    data += '<td>'+innovations+'</td>';
+                                    data += '<td>'+deliverables+'</td>';
+                                    data += "<td>"+approved+"</td>";
+                                    data += "<td>"+buttonproject+"</td>";
+                                    data += "</tr>";
+                                    $("#tabledata").append(data);
+                                }else if (change.type === "modified") {
+                                    var id = "#" + change.doc.id;
+                                    data = '<td id="'+change.doc.id+'no">'+$(id+"no").text()+"</td>";
+                                    data += "<td>"+change.doc.data().title+"</td>";
+                                    data += "<td>"+change.doc.data().sem+"</td>";
+                                    data += '<td>'+objective+'</td>';
+                                    data += '<td>'+innovations+'</td>';
+                                    data += '<td>'+deliverables+'</td>';
+                                     data += "<td>"+approved+"</td>";
+                                    data += "<td>"+buttonproject+"</td>";
+                                    $(id).html(data);
+                                }
+                            }else{
+                                var id = "#" +change.doc.id;
+                                $(id).remove();
+                            }
+                            no++;
+                        }); 
+                    }else{
+                        $("#tabledata").html('<tr id="norecord"><td colspan="7" class="text-center">No Record</td></tr>');
+                    }
+                });
+            }
+
+            function editProject(pid){
+                var obj = getdata(pid);
+                var db = firebase.firestore();
+                db.collection("project").doc(pid).update(obj)
+                .then(function() {
+                    alert("Updated");
+                 })
+                .catch(function(error) {
+                    console.log(error);
+                 });
+            }
+
+            function deleteProject(pid){
+                var db = firebase.firestore();
+                db.collection("project").doc(pid).delete().then(function() {
+                    alert("Deleted");
+                }).catch(function(error) {
+                   console.log(error);
+                });
+            }
+        </script>
+    </body>
+</html>

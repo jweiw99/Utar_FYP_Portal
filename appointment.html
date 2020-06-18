@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <meta name="description" content="">
+        <meta name="author" content="">
+        
+        <title>Appointment</title>
+        
+        <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon"/>
+
+         <!-- Custom fonts for this website-->
+         <link rel="stylesheet" href="css/fontawesome/all.min.css">
+         <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">
+ 
+         <!-- Custom styles for this website-->
+         <link href="css/sb-admin-2.min.css" rel="stylesheet">
+         <link href="vendor/datatables/dataTables.bootstrap4.min.css" rel="stylesheet">
+
+    </head>
+
+        <!-- Begin Page Content -->
+        <div class="container-fluid">
+
+            <!-- Page Heading -->
+            <h1 class="h3 mb-2 text-gray-800">Appointment</h1>
+            
+            <!-- DataTales Example -->
+            <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Lecturer</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                <table class="table table-bordered" id="lecTable" width="100%" cellspacing="0">
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Email</th>
+                        <th>Department</th>
+                        <th>Gender</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                </div>
+            </div>
+            </div>
+
+            <div id="addapptable">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Add Appointment</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                        <form id="target" method="post">
+                            <input type="hidden" id="lectureremail" value="">
+                        <div class = "form-group">
+                            <label>Date<input type="date" class="form-control" id="appointdate" required></label>
+                        </div>
+                        <div class = "form-group">
+                            <label>Start Time<input type="time" class="form-control" id="starttime" required></label>
+                        </div>
+                        <div class = "form-group">
+                            <label>End Time<input type="time" class="form-control" id="endtime" required></label>
+                        </div>
+                        <div class = "form-group">
+                            <textarea class="form-control rounded-0" id="remark" placeholder="Remark" rows="3" required></textarea>
+                        </div>
+                        <div class = "input-group">
+                            <input class="btn btn-primary btn-block" type="submit" value="Add">
+                        </div>
+                        </form>
+                    </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary pt-3 float-left">View Appointment</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                    <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                        <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Start Time</th>
+                            <th>End Time</th>
+                            <th>Comment</th>
+                            <th>Remark</th>
+                            <th>Approve</th>
+                            <th>Action</th>
+                        </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <!-- /.container-fluid -->
+
+        <!-- SCRIPTS -->
+        <!-- Js / Jquery -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.3.1/js/bootstrap.bundle.min.js"></script> 
+
+        <!-- Core plugin JavaScript-->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.4.1/jquery.easing.min.js"></script>
+
+        <!-- Custom scripts for all pages-->
+        <script src="js/sb-admin-2.min.js"></script>
+
+        <!-- Google Login -->
+        <script src="https://apis.google.com/js/platform.js" async defer></script>
+
+        <!-- Firebase login-->
+        <script src="https://www.gstatic.com/firebasejs/5.9.0/firebase.js"></script>
+        <script src="js/AccountFirebase.js"></script>
+
+        <!-- Page level plugins -->
+        <script src="vendor/datatables/jquery.dataTables.min.js"></script>
+        <script src="vendor/datatables/dataTables.bootstrap4.min.js"></script>
+
+        <!-- Custome JS -->
+        <script src="js/pagechecker.js"></script>
+        
+        <script>
+            var lectable = $('#lecTable').DataTable();
+            var table = $('#dataTable').DataTable();
+            $(function () {//onload
+                
+                pagechecker();
+                initApp();
+                table;
+                lectable;
+                $("#addapptable").hide();
+
+                $("#target").submit(function( event ) {
+                    event.preventDefault();
+                    var user = firebase.auth().currentUser;
+                    addApp(user);
+                });
+            });
+
+            function initApp(){
+                firebase.auth().onAuthStateChanged(function(user) {
+                    if (user) {
+                        if(!(user.email.split('@')[1] == '1utar.my' || user.email.split('@')[1] == 'utar.edu.my')){
+                            if(typeof(Storage)!=="undefined") sessionStorage.clear();
+                            firebase.auth().signOut();
+                        }else{
+                            getLecturerDetail(user);
+                        }
+                    }
+                });
+            }
+            
+            function getLecturerDetail(user){
+                var no = 1;
+                var db = firebase.firestore().collection("users");
+                db = db.where("type", "==", "2");
+                db.onSnapshot(function(snapshot) {
+                    if(!snapshot.empty){
+                        snapshot.docChanges().forEach(function(change) {
+                            if(change.type !== "removed"){
+                                var buttonapp = '<div><button class="btn btn-primary btn-block" type="button" onclick="makeAppoint(\''+change.doc.id+'\')">Make Appointment</button>';
+                                buttonapp += '<button class="btn btn-secondary btn-block" type="button" onclick="viewAppointment(\''+change.doc.id+'\')">View Appointment</button></div>';
+                                
+                                if (change.type === "added") {
+                                    var rowNode = lectable.row.add([
+                                        change.doc.data().sid,
+                                        change.doc.data().displayName,
+                                        change.doc.data().phoneno,
+                                        change.doc.data().email,
+                                        change.doc.data().course,
+                                        change.doc.data().gender,
+                                        buttonapp
+                                    ]).node();
+
+                                    $(rowNode).attr("id", change.doc.id);
+                                    lectable.draw();
+                                }else if (change.type === "modified") {
+                                    lectable.row($("#" + change.doc.id)).data([
+                                        change.doc.data().sid,
+                                        change.doc.data().displayName,
+                                        change.doc.data().phoneno,
+                                        change.doc.data().email,
+                                        change.doc.data().course,
+                                        change.doc.data().gender,
+                                        buttonapp
+                                    ]);
+                                    lectable.row($("#" + change.doc.id)).invalidate().draw();
+                                }
+                            }else{
+                                lectable.rows($("#" +change.doc.id)).remove().draw();
+                            }
+                        }); 
+                    }
+                });
+            }
+
+            function makeAppoint(email){
+                $("#lectureremail").val(email);
+                $("#addapptable").show();
+            }
+
+            function getappdata(user){
+                var obj = new Object();
+                obj.appointdate = $("#appointdate").val();
+                obj.starttime = $("#starttime").val();
+                obj.endtime = $("#endtime").val();
+                obj.lectureremail = $("#lectureremail").val();
+                obj.remark = $("#remark").val();
+                obj.comment = "";
+                obj.approved = "0";
+                obj.uid = user.uid;
+                obj.stuemail = user.email;
+                obj.insertDateTime = firebase.firestore.FieldValue.serverTimestamp();
+                obj.updateDateTime = firebase.firestore.FieldValue.serverTimestamp();
+                return obj;
+            }
+
+            function addApp(user){
+                var obj = getappdata(user);
+                var docRef = firebase.firestore().collection("appointment");
+                var query = docRef.where("logdate", "==", obj.appointdate);
+                query = query.where("uid", "==", user.uid);
+                query = query.where("approved", "==", "1");
+                query.get().then(function(thisDoc) {
+                    if (!thisDoc.empty) {
+                        alert("Only one appointment per day.");
+                    }
+                    else {
+                        alert("Added");
+                        $("#addapptable").hide();
+                        docRef.add(obj);
+                    }
+                }).catch(function(error) {
+                    console.log(error.message);
+                });
+            }
+            
+            function viewAppointment(email){
+                var user = firebase.auth().currentUser;
+                $("#addapptable").hide();
+                table.clear().draw();
+                var db = firebase.firestore().collection("appointment");
+                db = db.where("lectureremail", "==", email);
+                db = db.where("stuemail", "==", user.email);
+                db.onSnapshot(function(snapshot) {
+                    snapshot.docChanges().forEach(function(change) {
+                        if(change.type !== "removed"){
+                            var buttonapp = '';
+                            var approved = change.doc.data().approved=="0"?"No":change.doc.data().approved=="2"?"Rejected":"Yes";
+                            var starttime = change.doc.data().starttime;
+                            var endtime = change.doc.data().endtime;
+                            var remark = change.doc.data().remark;
+                            var comment = change.doc.data().comment==null?"No Comment":change.doc.data().comment;
+                            if(change.doc.data().approved=="0"){
+                                starttime = '<input type="time" class="form-control" id="'+change.doc.id+'st" value="'+starttime+'" required>';
+                                endtime = '<input type="time" class="form-control" id="'+change.doc.id+'ed" value="'+endtime+'" required>';
+                                remark = '<textarea class="form-control rounded-0" id="'+change.doc.id+'rmk" rows="3" required>'+remark+'</textarea>';
+                                buttonapp += '<div class=""><button class="btn btn-primary btn-block" type="button" onclick="editAppdata(\''+change.doc.id+'\')">Edit</button>';
+                                buttonapp += '<button class="btn btn-danger btn-block" type="button" onclick="deleteApp(\''+change.doc.id+'\')">Delete</button></div>';
+                            }
+
+                            if (change.type === "added") {
+                                var rowNode = table.row.add([
+                                    change.doc.data().appointdate,
+                                    starttime,
+                                    endtime,
+                                    remark,
+                                    comment,
+                                    approved,
+                                    buttonapp
+                                ]).node();
+
+                                $(rowNode).attr("id", change.doc.id);
+                                table.draw();
+                            }else if (change.type === "modified") {
+                                table.row($("#" + change.doc.id)).data([
+                                    change.doc.data().appointdate,
+                                    starttime,
+                                    endtime,
+                                    remark,
+                                    comment,
+                                    approved,
+                                    buttonapp
+                                ]);
+                                table.row($("#" + change.doc.id)).invalidate().draw();
+                            }
+                        }else if (change.type === "removed") {
+                            table.rows($("#" +change.doc.id)).remove().draw();
+                        }
+                    }); 
+                });
+            }
+
+            function getappinputdata(appid){
+                var obj = new Object();
+                obj.starttime = $("#"+appid+"st").val();
+                obj.endtime = $("#"+appid+"ed").val();
+                obj.remark = $("#"+appid+"rmk").val();
+                obj.updateDateTime = firebase.firestore.FieldValue.serverTimestamp();
+                return obj;
+            }
+
+            function editAppdata(appid){
+                var obj = getappinputdata(appid);
+                var db = firebase.firestore();
+                db.collection("appointment").doc(appid).update(obj)
+                .then(function() {
+                    alert("Updated");
+                 })
+                .catch(function(error) {
+                    console.log(error);
+                 });
+            }
+
+            function deleteApp(appid){
+                var db = firebase.firestore();
+                db.collection("appointment").doc(appid).delete().then(function() {
+                    alert("Deleted");
+                }).catch(function(error) {
+                   console.log(error);
+                });
+            }
+           
+        </script>
+    </body>
+</html>

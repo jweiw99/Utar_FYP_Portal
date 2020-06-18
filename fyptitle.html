@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <meta name="description" content="">
+        <meta name="author" content="">
+
+        <title>Project Title</title>
+        
+        <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon"/>
+
+        <!-- Custom fonts for this website-->
+        <link rel="stylesheet" href="css/fontawesome/all.min.css">
+        <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">
+
+        <!-- Custom styles for this website-->
+        <link rel = "stylesheet" href = "css/profile.css">
+    </head>
+    <body>
+        <div class="container">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Final Year Project Title</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <form action="POST" id="target">
+                            <div class = "input-group input-group-icon">
+                                <input type = "text" placeholder = "Sem (ex.201901)" id = "sem" required/>
+                                <div class = "input-icon"><i class = "fa fa-user"></i></div>
+                            </div>
+                            <div class = "input-group input-group-icon">
+                                <input type = "text" placeholder = "Title Name" id = "title" required/>
+                                <div class = "input-icon"><i class = "fa fa-user"></i></div>
+                            </div>
+                            <div class = "input-group input-group-icon">
+                                <input type = "text" placeholder = "Objective" id = "objective" required/>
+                                <div class = "input-icon"><i class = "fa fa-user"></i></div>
+                            </div>
+                            <div class = "input-group input-group-icon">
+                                <input type = "text" placeholder = "Innovations" id = "innovations" required/>
+                            <div class = "input-icon"><i class = "fa fa-user"></i></div>
+                            </div>
+                            <div class = "input-group input-group-icon">
+                                <input type = "text" placeholder = "Deliverables" id = "deliverables" required/>
+                                <div class = "input-icon"><i class = "fa fa-user"></i></div>
+                            </div>
+                            <div class = "input-group">
+                              <div><input type = "submit" name =  "submit" value = "Submit" id = "submit"/></div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    <!-- SCRIPTS -->
+        <!-- Js / Jquery -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.3.1/js/bootstrap.bundle.min.js"></script> 
+
+        <!-- Core plugin JavaScript-->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.4.1/jquery.easing.min.js"></script>
+
+        <!-- Custom scripts for all pages-->
+        <script src="js/sb-admin-2.min.js"></script>
+
+        <!-- Google Login -->
+        <script src="https://apis.google.com/js/platform.js" async defer></script>
+
+        <!-- Firebase login-->
+        <script src="https://www.gstatic.com/firebasejs/5.9.0/firebase.js"></script>
+        <script src="js/AccountFirebase.js"></script>
+
+        <!-- Custome JS -->
+        <script src="js/pagechecker.js"></script>
+
+        <script>
+            $(function () {//onload
+                
+                pagechecker();
+                initApp();
+
+                $("#target").submit(function( event ) {
+                    event.preventDefault();
+                    var user = firebase.auth().currentUser;
+                    updateView(user);
+                });
+            });
+
+            function getdata(user){
+                var obj = new Object();
+                obj.sem = $("#sem").val();
+                obj.title = $("#title").val();
+                obj.objective = $("#objective").val();
+                obj.innovations = $("#innovations").val();
+                obj.deliverables = $("#deliverables").val();
+                obj.mark = 0;
+                obj.grade = "";
+                obj.approved = "0";
+                obj.email = user.email;
+                obj.uid = user.uid;
+                obj.lectureemail = "";
+                obj.insertDateTime = firebase.firestore.FieldValue.serverTimestamp();
+                obj.updateDateTime = firebase.firestore.FieldValue.serverTimestamp();
+                return obj;
+            }
+
+            function initApp(){
+                firebase.auth().onAuthStateChanged(function(user) {
+                    if (user) {
+                        if(!(user.email.split('@')[1] == '1utar.my' || user.email.split('@')[1] == 'utar.edu.my')){
+                            if(typeof(Storage)!=="undefined") sessionStorage.clear();
+                            firebase.auth().signOut();
+                        }
+                    }
+                });
+            }
+
+            function updateView(user) {
+                var obj = getdata(user);
+                var docRef = firebase.firestore().collection("project");
+                var query = docRef.where("title", "==", obj.title)
+                query = query.where("uid", "==", user.uid);
+                query.get().then(function(thisDoc) {
+                    if (!thisDoc.empty) {
+                        alert("Duplicate Title");
+                    }
+                    else {
+                        query = docRef.where("sem", "==", obj.sem); 
+                        query = query.where("uid", "==", user.uid);
+                        query.get().then(function(thisDoc) {
+                            if (!thisDoc.empty) {
+                                alert("Only one Sem can apply one Project");
+                            }
+                            else {
+                                alert("Added");
+                                docRef.add(obj);
+                            }
+                        }).catch(function(error) {
+                            console.log(error.message);
+                        });
+                    }
+                }).catch(function(error) {
+                    console.log(error.message);
+                });
+            }
+        </script>
+   
+    </body>
+</html>
+

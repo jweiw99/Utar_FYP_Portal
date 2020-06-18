@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <meta name="description" content="">
+        <meta name="author" content="">
+
+        <title>Check Student LogBook</title>
+        
+        <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon"/>
+
+        <!-- Custom fonts for this website-->
+        <link rel="stylesheet" href="css/fontawesome/all.min.css">
+        <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">
+
+        <!-- Custom styles for this website-->
+        <link href="css/sb-admin-2.min.css" rel="stylesheet">
+        <link href="vendor/datatables/dataTables.bootstrap4.min.css" rel="stylesheet">
+
+    </head>
+    <body> 
+        <!-- Begin Page Content -->
+        <div class="container-fluid">
+
+            <!-- Page Heading -->
+            <h1 class="h3 mb-2 text-gray-800">Student LogBook</h1>
+            
+            <!-- DataTales Example -->
+            <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary pt-3 float-left">View Student Submitted LogBook</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Course</th>
+                        <th>Title</th>
+                        <th>Sem</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                </div>
+            </div>
+            </div>
+
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary pt-3 float-left">View Log Book</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                    <table class="table table-bordered" id="dataTable2" width="100%" cellspacing="0">
+                        <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Particular</th>
+                            <th>Remark</th>
+                            <th>Comment</th>
+                            <th>Action</th>
+                        </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <!-- /.container-fluid -->
+
+        <!-- SCRIPTS -->
+        <!-- Js / Jquery -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.3.1/js/bootstrap.bundle.min.js"></script> 
+
+        <!-- Core plugin JavaScript-->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.4.1/jquery.easing.min.js"></script>
+
+        <!-- Custom scripts for all pages-->
+        <script src="js/sb-admin-2.min.js"></script>
+
+        <!-- Google Login -->
+        <script src="https://apis.google.com/js/platform.js" async defer></script>
+
+        <!-- Firebase login-->
+        <script src="https://www.gstatic.com/firebasejs/5.9.0/firebase.js"></script>
+        <script src="js/AccountFirebase.js"></script>
+
+        <!-- Page level plugins -->
+        <script src="vendor/datatables/jquery.dataTables.min.js"></script>
+        <script src="vendor/datatables/dataTables.bootstrap4.min.js"></script>
+
+        <!-- Custome JS -->
+        <script src="js/pagechecker.js"></script>
+
+        <script>
+            var table = $('#dataTable').DataTable();
+            var table2 = $('#dataTable2').DataTable();
+            $(function () {//onload
+                
+                pagechecker();
+                initApp();
+                table;
+                table2;
+
+            });
+
+            function initApp(){
+                firebase.auth().onAuthStateChanged(function(user) {
+                    if (user) {
+                        if(!(user.email.split('@')[1] == '1utar.my' || user.email.split('@')[1] == 'utar.edu.my')){
+                            if(typeof(Storage)!=="undefined") sessionStorage.clear();
+                            firebase.auth().signOut();
+                        }else{
+                            getProjectDetail(user);
+                        }
+                    }
+                });
+            }
+
+            function getdata(no,user){
+                var obj = new Object();
+                obj.approved = no;
+                obj.lectureemail = user.email;
+                obj.updateDateTime = firebase.firestore.FieldValue.serverTimestamp();
+                return obj;
+            }
+            
+            function getProjectDetail(user){
+                var db = firebase.firestore().collection("project");
+                db = db.where("approved", "==", "1");
+                db = db.where("lectureemail", "==", user.email);
+                db.onSnapshot(function(snapshot) {
+                    snapshot.docChanges().forEach(function(change) {
+                        if(change.type !== "removed"){
+                            getStudentName(change);
+                        }else if (change.type === "removed") {
+                            table.rows($("#" +change.doc.id)).remove().draw();
+                        }
+                    }); 
+                });
+            }
+
+            function getStudentName(change){
+                var docRef = firebase.firestore().collection("users").doc(change.doc.data().email);
+                docRef.get().then(function(doc) {
+                    if (doc.exists) {
+                        printProjectData(doc,change);
+                    }
+                }).catch(function(error) {
+                    console.log(error.message);
+                });
+            }
+
+            function printProjectData(doc,change){
+                var buttonproject = '<button class="btn btn-primary btn-block" type="button" onclick="viewLogBook(\''+change.doc.data().grade+'\',\''+change.doc.id+'\')">View LogBook</button></div>';
+                
+                if (change.type === "added") {
+                    var rowNode = table.row.add([
+                        doc.data().sid,
+                        doc.data().displayName,
+                        doc.data().course,
+                        change.doc.data().title,
+                        change.doc.data().sem,
+                        buttonproject
+                    ]).node();
+
+                    $(rowNode).attr("id", change.doc.id);
+                    table.draw();
+                }else if (change.type === "modified") {
+                    table.row($("#" + change.doc.id)).data([
+                        doc.data().sid,
+                        doc.data().displayName,
+                        doc.data().course,
+                        change.doc.data().title,
+                        change.doc.data().sem,
+                        buttonproject
+                    ]);
+                    table.row($("#" + change.doc.id)).invalidate().draw();
+                }
+            }
+
+            function viewLogBook(grade,pid){
+                table2.clear().draw();
+                var db = firebase.firestore().collection("logbook");
+                db = db.where("projectid", "==", pid);
+                db.onSnapshot(function(snapshot) {
+                    snapshot.docChanges().forEach(function(change) {
+                        if(change.type !== "removed"){
+                            var comment = change.doc.data().comment==null?"":change.doc.data().comment;
+                            var buttonlogbook = '';
+                            if(grade==""){
+                                comment = '<textarea class="form-control rounded-0" id="'+change.doc.id+'cmt" rows="3" required>'+comment+'</textarea>';
+                                buttonlogbook = '<div class=""><button class="btn btn-primary btn-block" type="button" onclick="editLogBook(\''+change.doc.id+'\')">Edit</button>';
+                            }
+                            if (change.type === "added") {
+                                var rowNode = table2.row.add([
+                                    change.doc.data().logdate,
+                                    change.doc.data().particular,
+                                    change.doc.data().remark,
+                                    comment,
+                                    buttonlogbook
+                                ]).node();
+
+                                $(rowNode).attr("id", change.doc.id);
+                                table2.draw();
+                            }else if (change.type === "modified") {
+                                table2.row($("#" + change.doc.id)).data([
+                                    change.doc.data().logdate,
+                                    change.doc.data().particular,
+                                    change.doc.data().remark,
+                                    comment,
+                                    buttonlogbook
+                                ]);
+                                table2.row($("#" + change.doc.id)).invalidate().draw();
+                            }
+                        }else if (change.type === "removed") {
+                            table2.rows($("#" +change.doc.id)).remove().draw();
+                        }
+                    }); 
+                });
+            }
+
+            function getlogbookdata(logid){
+                var obj = new Object();
+                obj.comment = $("#"+logid+"cmt").val();
+                obj.updateDateTime = firebase.firestore.FieldValue.serverTimestamp();
+                return obj;
+            }
+
+            function editLogBook(logid){
+                var obj = getlogbookdata(logid);
+                var db = firebase.firestore();
+                db.collection("logbook").doc(logid).update(obj)
+                .then(function() {
+                    alert("Updated");
+                 })
+                .catch(function(error) {
+                    console.log(error);
+                 });
+            }
+           
+        </script>
+    </body>
+</html>
